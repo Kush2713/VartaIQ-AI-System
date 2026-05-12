@@ -25,6 +25,10 @@
 #             "balance_score": balance_score
 #         }
 #     }
+# {
+#   "final_score": 82,
+#   "rating": "Excellent"
+# }
 PRODUCTIVE_KEYWORDS = {
     "complete",
     "finalize",

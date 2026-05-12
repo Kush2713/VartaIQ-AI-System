@@ -1,6 +1,11 @@
 from collections import defaultdict
 
-
+# {
+#   "Akshay": {
+#     "word_count": 120,  Total words spoken
+#     "percentage": 62    Participation percentage
+#   }
+# }
 def analyze_speakers(data):
 
     word_count = defaultdict(int)
