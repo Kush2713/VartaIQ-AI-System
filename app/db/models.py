@@ -1,16 +1,76 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime
-from datetime import datetime
+from sqlalchemy import (
 
-from app.db.database import Base
+    Column,
+
+    Integer,
+
+    String,
+
+    JSON,
+
+    DateTime
+)
+
+from sqlalchemy.sql import (
+    func
+)
+
+from sqlalchemy.ext.declarative import (
+    declarative_base
+)
+
+Base = declarative_base()
 
 
 class MeetingAnalysis(Base):
 
     __tablename__ = "meeting_analysis"
 
-    id = Column(Integer, primary_key=True, index=True)
+    # =====================================
+    # PRIMARY ID
+    # =====================================
+
+    id = Column(
+
+        Integer,
+
+        primary_key=True,
+
+        index=True
+    )
+
+    # =====================================
+    # MEETING METADATA
+    # =====================================
+
+    meeting_title = Column(
+        String,
+        default="Untitled Meeting"
+    )
+
+    participant_count = Column(
+        Integer,
+        default=0
+    )
+
+    transcript_length = Column(
+        Integer,
+        default=0
+    )
+
+    # =====================================
+    # CORE AI OUTPUTS
+    # =====================================
 
     summary = Column(String)
+
+    topics = Column(JSON)
+
+    transcript = Column(JSON)
+
+    # =====================================
+    # NLP / AI MODULE OUTPUTS
+    # =====================================
 
     action_items = Column(JSON)
 
@@ -22,6 +82,36 @@ class MeetingAnalysis(Base):
 
     score = Column(JSON)
 
-    transcript = Column(JSON)
+    ai_insights = Column(String)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    # =====================================
+    # NEW ADVANCED AI FEATURES
+    # =====================================
+
+    sentiment_analysis = Column(JSON)
+
+    conflicts = Column(JSON)
+
+    risks = Column(JSON)
+
+    followups = Column(JSON)
+
+    # =====================================
+    # TIMESTAMPS
+    # =====================================
+
+    created_at = Column(
+
+        DateTime(timezone=True),
+
+        server_default=func.now()
+    )
+
+    updated_at = Column(
+
+        DateTime(timezone=True),
+
+        server_default=func.now(),
+
+        onupdate=func.now()
+    )

@@ -1,119 +1,426 @@
-# def detect_useless_talk(data):
-#     useless = []
-
-#     for item in data:
-#         words = item["text"].split()
-#         filler_count = sum(1 for w in words if w.lower() in ["umm", "uh", "okay", "yeah"])
-
-#         if len(words) <= 2 or (filler_count / len(words)) > 0.4:
-#             useless.append(item)
-
-#     return useless
-
 import spacy
+
+from app.modules.context_engine import (
+    calculate_context_relevance
+)
+
+from app.modules.deduplication import (
+    semantic_deduplicate
+)
+
+from app.config.ai_config import (
+    USELESS_RELEVANCE_THRESHOLD
+)
 
 nlp = spacy.load("en_core_web_sm")
 
-FILLER_WORDS = {
+
+# =====================================
+# CONFIGURATION
+# =====================================
+
+
+
+
+# =====================================
+# META MEETING TERMS
+# =====================================
+
+META_MEETING_TERMS = {
+
+    "meeting",
+    "discussion",
+    "agenda",
+    "topic",
+    "timeline",
+    "deadline",
+    "progress",
+    "requirement",
+    "issue",
+    "problem",
+    "update",
+    "planning",
+    "review"
+}
+
+
+# =====================================
+# FILLER EXPRESSIONS
+# =====================================
+
+FILLER_EXPRESSIONS = {
+
     "umm",
     "uh",
+    "hmm",
     "yeah",
     "okay",
-    "hmm",
-    "like"
-}
-
-IMPORTANT_VERBS = {
-    "deploy",
-    "complete",
-    "finalize",
-    "approve",
-    "design",
-    "integrate",
-    "test",
-    "review",
-    "submit",
-    "prepare"
+    "cool",
+    "nice",
+    "right",
+    "alright"
 }
 
 
-def is_meaningful(sent):
-    """
-    Determines whether sentence contains meaningful intent.
-    """
+# =====================================
+# CHECK FILLER SENTENCE
+# =====================================
 
-    for token in sent:
+def is_filler_sentence(sentence):
 
-        # meaningful action verbs
-        if token.lemma_.lower() in IMPORTANT_VERBS:
-            return True
+    cleaned = sentence.lower().strip()
 
-        # proper nouns often indicate entities/tasks
-        if token.pos_ in {"PROPN", "NOUN"}:
+    words = cleaned.split()
+
+    if len(words) <= 3:
+
+        filler_count = sum(
+
+            1 for word in words
+
+            if word in FILLER_EXPRESSIONS
+        )
+
+        if filler_count >= 1:
             return True
 
     return False
 
 
-def detect_useless_talk(data):
-    useless = []
+# =====================================
+# CHECK META DISCUSSION
+# =====================================
 
-    for item in data:
+def is_meta_meeting_sentence(sentence):
+
+    lowered = sentence.lower()
+
+    for word in META_MEETING_TERMS:
+
+        if word in lowered:
+            return True
+
+    return False
+
+
+# =====================================
+# MAIN DETECTION
+# =====================================
+
+def detect_useless_talk(
+    transcript,
+    context
+):
+
+    useless_segments = []
+
+    # ---------------------------------
+    # Shared semantic context
+    # ---------------------------------
+
+    meeting_embedding = context[
+        "meeting_embedding"
+    ]
+
+    detected_topics = context[
+        "topics"
+    ]
+
+    # ---------------------------------
+    # Analyze sentences
+    # ---------------------------------
+
+    for item in transcript:
 
         doc = nlp(item["text"])
 
         for sent in doc.sents:
 
-            words = [token.text.lower() for token in sent if not token.is_punct]
-
-            if not words:
-                continue
-
-            filler_count = sum(
-                1 for word in words if word in FILLER_WORDS
+            sentence_text = (
+                sent.text.strip()
             )
 
-            filler_ratio = filler_count / len(words)
+            # -------------------------
+            # Skip empty sentences
+            # -------------------------
 
-            meaningful = is_meaningful(sent)
+            if len(sentence_text) < 2:
+                continue
 
-            # useless if mostly filler + no meaningful intent
-            if filler_ratio > 0.4 and not meaningful:
+            # -------------------------
+            # Filler conversation
+            # -------------------------
 
-                useless.append({
-                    "speaker": item["speaker"],
-                    "text": sent.text.strip()
+            if is_filler_sentence(
+                sentence_text
+            ):
+
+                useless_segments.append({
+
+                    "speaker":
+                        item["speaker"],
+
+                    "text":
+                        sentence_text,
+
+                    "reason":
+                        "Filler conversation",
+
+                    "relevance_score":
+                        0.0
                 })
 
-    return useless
+                continue
 
-# CURRENT PROBLEMS
-# - False Positives
+            # -------------------------
+            # Meta meeting discussion
+            # Never classify as useless
+            # -------------------------
 
-# Example:
+            if is_meta_meeting_sentence(
+                sentence_text
+            ):
+                continue
 
-# "Okay approved"
+            # -------------------------
+            # Semantic relevance
+            # -------------------------
 
-# Important confirmation.
+            relevance_score = (
+                calculate_context_relevance(
 
-# Could be marked useless.
+                    sentence_text,
 
-# - No semantic understanding
+                    meeting_embedding
+                )
+            )
 
-# Example:
+            # -------------------------
+            # Truly off-topic
+            # -------------------------
 
-# "Yeah let's deploy today"
+            if relevance_score < (
+                USELESS_RELEVANCE_THRESHOLD
+            ):
 
-# Actually important.
+                useless_segments.append({
 
-# But filler exists.
+                    "speaker":
+                        item["speaker"],
 
-# - Short sentence ≠ useless
+                    "text":
+                        sentence_text,
 
-# Example:
+                    "reason":
+                        "Off-topic discussion",
 
-# "Deployment confirmed"
+                    "relevance_score":
+                        relevance_score
+                })
 
-# Very important.
+    # =================================
+    # SEMANTIC DEDUPLICATION
+    # =================================
 
-# But short.
+    useless_segments = semantic_deduplicate(
+
+        useless_segments,
+
+        "text"
+    )
+
+    # ---------------------------------
+    # Final Output
+    # ---------------------------------
+
+    return {
+
+    "useless_segments":
+        useless_segments
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # def detect_useless_talk(data):
+# #     useless = []
+
+# #     for item in data:
+# #         words = item["text"].split()
+# #         filler_count = sum(1 for w in words if w.lower() in ["umm", "uh", "okay", "yeah"])
+
+# #         if len(words) <= 2 or (filler_count / len(words)) > 0.4:
+# #             useless.append(item)
+
+# #     return useless
+
+# import spacy
+
+# nlp = spacy.load("en_core_web_sm")
+
+# FILLER_WORDS = {
+#     "umm",
+#     "uh",
+#     "yeah",
+#     "okay",
+#     "hmm",
+#     "like"
+# }
+
+# IMPORTANT_VERBS = {
+#     "deploy",
+#     "complete",
+#     "finalize",
+#     "approve",
+#     "design",
+#     "integrate",
+#     "test",
+#     "review",
+#     "submit",
+#     "prepare"
+# }
+
+
+# def is_meaningful(sent):
+#     """
+#     Determines whether sentence contains meaningful intent.
+#     """
+
+#     for token in sent:
+
+#         # meaningful action verbs
+#         if token.lemma_.lower() in IMPORTANT_VERBS:
+#             return True
+
+#         # proper nouns often indicate entities/tasks
+#         if token.pos_ in {"PROPN", "NOUN"}:
+#             return True
+
+#     return False
+
+
+# def detect_useless_talk(data):
+#     useless = []
+
+#     for item in data:
+
+#         doc = nlp(item["text"])
+
+#         for sent in doc.sents:
+
+#             words = [token.text.lower() for token in sent if not token.is_punct]
+
+#             if not words:
+#                 continue
+
+#             filler_count = sum(
+#                 1 for word in words if word in FILLER_WORDS
+#             )
+
+#             filler_ratio = filler_count / len(words)
+
+#             meaningful = is_meaningful(sent)
+
+#             # useless if mostly filler + no meaningful intent
+#             if filler_ratio > 0.4 and not meaningful:
+
+#                 useless.append({
+#                     "speaker": item["speaker"],
+#                     "text": sent.text.strip()
+#                 })
+
+#     return useless
+
+# # CURRENT PROBLEMS
+# # - False Positives
+
+# # Example:
+
+# # "Okay approved"
+
+# # Important confirmation.
+
+# # Could be marked useless.
+
+# # - No semantic understanding
+
+# # Example:
+
+# # "Yeah let's deploy today"
+
+# # Actually important.
+
+# # But filler exists.
+
+# # - Short sentence ≠ useless
+
+# # Example:
+
+# # "Deployment confirmed"
+
+# # Very important.
+
+# # But short.
