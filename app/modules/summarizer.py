@@ -298,6 +298,10 @@ def clean_summary(summary):
 
     summary = summary.strip()
 
+    # Strip model-generated "Summary:" prefix
+    if summary.lower().startswith("summary:"):
+        summary = summary[len("summary:"):].strip()
+
     replacements = {
 
         "will discuss":

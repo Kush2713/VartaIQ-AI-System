@@ -15,15 +15,21 @@ STRONG_DECISION_PHRASES = {
 
     "final plan",
     "we agreed",
+    "agreed",
     "approved",
     "confirmed",
     "finalized",
     "decision is",
+    "final decision",
     "we decided",
     "let's finalize",
     "must complete",
     "will proceed",
-    "moving forward"
+    "moving forward",
+    "officially",
+    "is officially",
+    "moved to",
+    "is moved"
 }
 
 
@@ -129,7 +135,7 @@ def extract_decisions(transcript):
                 )
             )
 
-            if confidence >= 0.50:
+            if confidence >= 0.40:
 
                 decisions.append({
 

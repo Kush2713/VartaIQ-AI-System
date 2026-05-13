@@ -267,15 +267,15 @@ def calculate_score(
     final_score = round(
 
         (
-            productivity_score * 0.20 +
+            productivity_score * 0.15 +
 
-            relevance_score * 0.20 +
+            relevance_score * 0.15 +
 
             balance_score * 0.15 +
 
-            action_score * 0.20 +
+            action_score * 0.25 +
 
-            decision_score * 0.15 +
+            decision_score * 0.20 +
 
             conversation_score * 0.10
         ),
@@ -285,17 +285,19 @@ def calculate_score(
 
     # ---------------------------------
     # Final rating
+    # Thresholds calibrated to realistic
+    # score distributions from the formula
     # ---------------------------------
 
-    if final_score >= 85:
+    if final_score >= 75:
 
         rating = "Excellent"
 
-    elif final_score >= 70:
+    elif final_score >= 58:
 
         rating = "Good"
 
-    elif final_score >= 50:
+    elif final_score >= 40:
 
         rating = "Average"
 

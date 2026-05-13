@@ -20,9 +20,13 @@ DOMINANT_THRESHOLD = 35
 
 PASSIVE_THRESHOLD = 10
 
-HIGH_ENGAGEMENT_SCORE = 75
+# Adjusted to match realistic effectiveness score range.
+# The formula produces scores roughly in 20-70 range for
+# typical meeting participants, so thresholds are calibrated
+# accordingly rather than using absolute 75/45 cutoffs.
+HIGH_ENGAGEMENT_SCORE = 55
 
-MEDIUM_ENGAGEMENT_SCORE = 45
+MEDIUM_ENGAGEMENT_SCORE = 30
 
 
 # =====================================

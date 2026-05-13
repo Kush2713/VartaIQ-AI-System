@@ -257,13 +257,18 @@ def clean_task(task):
         "actually"
     ]
 
-    cleaned = task.lower()
+    # Preserve original casing — only strip fillers
+    cleaned = task
 
     for filler in fillers:
 
-        cleaned = cleaned.replace(
-            filler,
-            ""
+        # Case-insensitive filler removal
+        import re
+        cleaned = re.sub(
+            r'\b' + filler + r'\b',
+            '',
+            cleaned,
+            flags=re.IGNORECASE
         )
 
     cleaned = " ".join(

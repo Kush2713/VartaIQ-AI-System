@@ -30,6 +30,45 @@ nlp = spacy.load("en_core_web_sm")
 
 
 # =====================================
+# TOPIC NOISE BLOCKLIST
+# Overly specific phrases that are
+# details, not meeting topics
+# =====================================
+
+TOPIC_BLOCKLIST = {
+
+    "all swagger endpoints",
+    "swagger endpoints",
+    "all endpoints",
+    "the latest fixes",
+    "latest fixes",
+    "the next release",
+    "next release",
+    "the qa team",
+    "qa team",
+    "more testing time",
+    "the client",
+    "the team",
+    "the meeting",
+    "the weekend",
+    "tomorrow evening",
+    "tonight",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "the demo",
+    "demo performance",
+    "client presentation",
+    "the model",
+    "the database",
+    "the backend",
+    "the frontend"
+}
+
+
+# =====================================
 # STOP PREFIXES
 # =====================================
 
@@ -96,6 +135,10 @@ def extract_candidate_topics(transcript):
                 "that",
                 "they"
             }:
+                continue
+
+            # Skip blocklisted noise phrases
+            if phrase in TOPIC_BLOCKLIST:
                 continue
 
             cleaned = clean_topic_text(

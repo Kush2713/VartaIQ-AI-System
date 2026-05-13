@@ -58,7 +58,18 @@ IMPORTANT_CONTEXT_TERMS = {
     "frontend",
     "analytics",
     "testing",
-    "integration"
+    "integration",
+    "agreed",
+    "decision",
+    "finalized",
+    "confirmed",
+    "officially",
+    "must",
+    "clustering",
+    "semantic",
+    "pipeline",
+    "architecture",
+    "infrastructure"
 }
 
 
@@ -81,8 +92,50 @@ FILLER_EXPRESSIONS = {
 
 
 # =====================================
-# CHECK FILLER
+# GREETING / CLOSING PHRASES
+# These are socially normal in meetings
+# and should never be flagged as useless
 # =====================================
+
+GREETING_PHRASES = {
+
+    "good morning",
+    "good afternoon",
+    "good evening",
+    "hello everyone",
+    "hi everyone",
+    "hi team",
+    "hello team",
+    "welcome everyone",
+    "thanks everyone",
+    "thank you everyone",
+    "great job",
+    "well done",
+    "excellent",
+    "sounds good",
+    "perfect",
+    "that's great",
+    "good work"
+}
+
+
+# =====================================
+# CHECK GREETING / CLOSING
+# =====================================
+
+def is_greeting_or_closing(sentence):
+
+    lowered = sentence.lower().strip()
+
+    for phrase in GREETING_PHRASES:
+
+        if lowered.startswith(phrase):
+            return True
+
+    return False
+
+
+
 
 def is_filler_sentence(sentence):
 
@@ -165,6 +218,15 @@ def detect_useless_talk(
             )
 
             if len(sentence_text) < 2:
+                continue
+
+            # ---------------------------------
+            # Greeting / closing — always keep
+            # ---------------------------------
+
+            if is_greeting_or_closing(
+                sentence_text
+            ):
                 continue
 
             # ---------------------------------

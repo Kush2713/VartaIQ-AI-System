@@ -60,11 +60,6 @@ def generate_productivity_insights(
         {}
     )
 
-    productivity_score = breakdown.get(
-        "productivity_score",
-        0
-    )
-
     action_score = breakdown.get(
         "action_score",
         0
@@ -75,7 +70,11 @@ def generate_productivity_insights(
         0
     )
 
-    if final_score >= 85:
+    # ---------------------------------
+    # Overall meeting quality insight
+    # ---------------------------------
+
+    if final_score >= 80:
 
         insights.append(
 
@@ -84,45 +83,62 @@ def generate_productivity_insights(
             "decision-making."
         )
 
-    elif final_score >= 70:
+    elif final_score >= 60:
 
         insights.append(
 
-            "Meeting was productive overall, "
-            "but execution clarity can still improve."
+            "Meeting was productive with clear "
+            "task ownership and actionable outcomes."
+        )
+
+    elif final_score >= 45:
+
+        insights.append(
+
+            "Meeting covered key topics with "
+            "reasonable task clarity. Some areas "
+            "can be improved for better alignment."
         )
 
     else:
 
         insights.append(
 
-            "Meeting effectiveness was limited due "
-            "to unclear alignment, weak actionability, "
-            "or low discussion focus."
+            "Meeting had limited structure. "
+            "Improving task ownership and reducing "
+            "off-topic segments would help."
         )
 
-    if productivity_score < 50:
+    # ---------------------------------
+    # Action item quality
+    # ---------------------------------
+
+    if action_score >= 80:
 
         insights.append(
 
-            "Discussion lacked strong task-oriented "
-            "execution focus."
+            "Strong actionable commitments were "
+            "identified with clear ownership."
         )
 
-    if action_score < 50:
+    elif action_score < 40:
 
         insights.append(
 
-            "Few actionable commitments were "
-            "identified during the meeting."
+            "Consider assigning clearer task "
+            "ownership in future meetings."
         )
 
-    if decision_score < 50:
+    # ---------------------------------
+    # Decision quality
+    # ---------------------------------
+
+    if decision_score >= 70:
 
         insights.append(
 
-            "Meeting discussions lacked strong "
-            "decision finalization."
+            "Decisions were well-defined and "
+            "confirmed during the meeting."
         )
 
     return insights
@@ -138,7 +154,11 @@ def generate_speaker_insights(
 
     insights = []
 
-    dominant_speakers = []
+    high_performers = []
+
+    good_performers = []
+
+    low_performers = []
 
     passive_members = []
 
@@ -146,36 +166,77 @@ def generate_speaker_insights(
         speaker_analysis.items()
     ):
 
-        if data.get(
-            "dominant_speaker"
-        ):
+        effectiveness = data.get(
+            "effectiveness_score",
+            0
+        )
 
-            dominant_speakers.append(
-                speaker
-            )
+        engagement = data.get(
+            "engagement_level",
+            "Low"
+        )
 
-        if data.get(
-            "passive_participant"
-        ):
+        is_passive = data.get(
+            "passive_participant",
+            False
+        )
+
+        if is_passive:
 
             passive_members.append(
                 speaker
             )
 
-    if dominant_speakers:
+        elif engagement == "High" or effectiveness >= 55:
+
+            high_performers.append(
+                speaker
+            )
+
+        elif engagement == "Medium" or effectiveness >= 35:
+
+            good_performers.append(
+                speaker
+            )
+
+        else:
+
+            low_performers.append(
+                speaker
+            )
+
+    if high_performers:
 
         insights.append(
 
-            f"High participation dominance detected "
-            f"from: {', '.join(dominant_speakers)}."
+            f"{', '.join(high_performers)} showed "
+            f"strong engagement and task-oriented "
+            f"contributions."
+        )
+
+    if good_performers:
+
+        insights.append(
+
+            f"{', '.join(good_performers)} contributed "
+            f"meaningfully to the discussion."
+        )
+
+    if low_performers:
+
+        insights.append(
+
+            f"{', '.join(low_performers)} had limited "
+            f"participation. Encouraging more "
+            f"structured input could help."
         )
 
     if passive_members:
 
         insights.append(
 
-            f"Low engagement observed from: "
-            f"{', '.join(passive_members)}."
+            f"{', '.join(passive_members)} had minimal "
+            f"speaking time in this meeting."
         )
 
     return insights

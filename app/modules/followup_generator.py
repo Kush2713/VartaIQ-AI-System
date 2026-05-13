@@ -1,5 +1,43 @@
 import re
 
+from app.modules.deduplication import (
+    semantic_deduplicate
+)
+
+# =====================================
+# FILLER PREFIXES
+# =====================================
+
+FILLER_PREFIXES = {
+
+    "i will",
+    "we will",
+    "we should",
+    "we need to",
+    "please",
+    "today",
+    "tomorrow",
+    "let's",
+    "kindly"
+}
+
+# =====================================
+# IMPERATIVE VERB FIXES
+# =====================================
+
+VERB_NORMALIZATION = {
+
+    "finalizing": "Finalize",
+    "deploying": "Deploy",
+    "implementing": "Implement",
+    "testing": "Test",
+    "reviewing": "Review",
+    "creating": "Create",
+    "preparing": "Prepare",
+    "updating": "Update",
+    "optimizing": "Optimize",
+    "fixing": "Fix"
+}
 
 # =====================================
 # CLEAN TEXT
@@ -19,14 +57,14 @@ def clean_text(text):
         text
     )
 
-    # Remove duplicate punctuation
+    # Remove repeated punctuation
     text = re.sub(
         r"([.,!?])\1+",
         r"\1",
         text
     )
 
-    # Remove quote wrapping
+    # Remove quotes
     text = text.replace(
         "\"",
         ""
@@ -36,50 +74,157 @@ def clean_text(text):
 
     return text
 
+# =====================================
+# REMOVE FILLER PREFIXES
+# =====================================
+
+def remove_filler_prefixes(
+    text
+):
+
+    lowered = text.lower()
+
+    for prefix in (
+        FILLER_PREFIXES
+    ):
+
+        if lowered.startswith(prefix):
+
+            text = text[
+                len(prefix):
+            ].strip()
+
+            lowered = text.lower()
+
+    return text
 
 # =====================================
-# SHORTEN TASK
+# REMOVE DEADLINE PHRASES
 # =====================================
 
-def shorten_task(task):
+def remove_deadline_phrases(
+    text
+):
+
+    patterns = [
+
+        r"\bbefore\s+\w+",
+
+        r"\bby\s+\w+",
+
+        r"\btoday\b",
+
+        r"\btomorrow\b"
+    ]
+
+    for pattern in patterns:
+
+        text = re.sub(
+
+            pattern,
+
+            "",
+
+            text,
+
+            flags=re.IGNORECASE
+        )
+
+    return text.strip()
+
+# =====================================
+# NORMALIZE TASK
+# =====================================
+
+def normalize_task(task):
 
     task = clean_text(task)
 
-    task = task.replace(
-        "we need to",
-        ""
-    )
+    # ---------------------------------
+    # Strip "Final decision:" prefix
+    # ---------------------------------
 
-    task = task.replace(
-        "i will",
-        ""
-    )
+    if task.lower().startswith("final decision:"):
+        task = task[len("final decision:"):].strip()
 
-    task = task.replace(
-        "we should",
-        ""
-    )
+    # ---------------------------------
+    # Remove filler openings
+    # ---------------------------------
 
-    task = task.replace(
-        "please",
-        ""
-    )
+    task = remove_filler_prefixes(task)
 
-    task = task.strip()
+    # ---------------------------------
+    # Remove inline deadline phrases
+    # so they don't duplicate the
+    # deadline appended at the end
+    # ---------------------------------
 
-    # Capitalize properly
-    if len(task) > 1:
+    task = remove_deadline_phrases(task)
 
-        task = (
-            task[0].upper()
-            + task[1:]
-        )
+    # ---------------------------------
+    # Normalize verbs
+    # ---------------------------------
+
+    words = task.split()
+
+    if words:
+
+        first_word = words[0].lower()
+
+        if first_word in VERB_NORMALIZATION:
+
+            words[0] = VERB_NORMALIZATION[first_word]
+
+        else:
+
+            words[0] = words[0].capitalize()
+
+    task = " ".join(words)
+
+    # ---------------------------------
+    # Final cleanup
+    # ---------------------------------
+
+    task = re.sub(r"\s+", " ", task)
+
+    task = task.strip(" .,")
 
     return task
 
+# =====================================
+# FORMAT DEADLINE
+# =====================================
+
+def format_deadline(
+    deadline
+):
+
+    if not deadline:
+        return ""
+
+    deadline = clean_text(deadline)
+
+    # Strip leading "before" / "by" so we
+    # don't produce "before Before friday"
+    # when we append "before {deadline}"
+    deadline_lower = deadline.lower()
+
+    for prefix in ("before ", "by "):
+
+        if deadline_lower.startswith(prefix):
+
+            deadline = deadline[len(prefix):].strip()
+
+            break
+
+    # Capitalise first letter
+    if deadline:
+        deadline = deadline[0].upper() + deadline[1:]
+
+    return deadline
 
 # =====================================
-# GENERATE ACTION FOLLOWUPS
+# ACTION FOLLOWUPS
 # =====================================
 
 def generate_action_followups(
@@ -90,12 +235,15 @@ def generate_action_followups(
 
     for action in action_items:
 
-        assignee = action.get(
-            "assignee",
-            "Team"
+        assignee = clean_text(
+
+            action.get(
+                "assignee",
+                "Team"
+            )
         )
 
-        task = shorten_task(
+        task = normalize_task(
 
             action.get(
                 "task",
@@ -103,7 +251,7 @@ def generate_action_followups(
             )
         )
 
-        deadline = clean_text(
+        deadline = format_deadline(
 
             action.get(
                 "deadline",
@@ -119,48 +267,79 @@ def generate_action_followups(
             )
         )
 
-        if not task:
+        # ---------------------------------
+        # Skip weak tasks
+        # ---------------------------------
+
+        if len(task.split()) < 3:
             continue
 
-        # -----------------------------
-        # Deadline Handling
-        # -----------------------------
+        # ---------------------------------
+        # Build sentence
+        # ---------------------------------
+
+        # Ensure task doesn't start with
+        # a pronoun/filler that makes the
+        # "{assignee} should {task}" awkward
+        task_lower = task.lower()
+
+        awkward_starts = (
+            "we need to",
+            "we should",
+            "we will",
+            "i will",
+            "i should",
+            "today we",
+            "today i",
+        )
+
+        for start in awkward_starts:
+
+            if task_lower.startswith(start):
+
+                task = task[len(start):].strip()
+
+                if task:
+                    task = (
+                        task[0].upper()
+                        + task[1:]
+                    )
+
+                break
+
+        sentence = (
+            f"{assignee} should "
+            f"{task}"
+        )
 
         if deadline:
 
-            sentence = (
-
-                f"{assignee} should complete "
-                f"{task} by {deadline}."
+            sentence += (
+                f" before {deadline}"
             )
 
-        else:
+        sentence += "."
 
-            sentence = (
-
-                f"{assignee} should complete "
-                f"{task}."
-            )
-
-        # -----------------------------
-        # Priority Enhancement
-        # -----------------------------
+        # ---------------------------------
+        # Priority enhancement
+        # ---------------------------------
 
         if priority.lower() == "high":
 
             sentence += (
-                " This task is high priority."
+                " This is a high-priority task."
             )
 
-        followups.append(
-            clean_text(sentence)
-        )
+        followups.append({
+
+            "text":
+                clean_text(sentence)
+        })
 
     return followups
 
-
 # =====================================
-# GENERATE DECISION FOLLOWUPS
+# DECISION FOLLOWUPS
 # =====================================
 
 def generate_decision_followups(
@@ -179,24 +358,27 @@ def generate_decision_followups(
             )
         )
 
-        if not decision_text:
+        if len(
+            decision_text.split()
+        ) < 4:
             continue
 
         sentence = (
 
-            "Ensure execution alignment for "
-            f"decision: {decision_text}."
+            "Ensure alignment and execution "
+            f"for decision: {decision_text}."
         )
 
-        followups.append(
-            clean_text(sentence)
-        )
+        followups.append({
+
+            "text":
+                clean_text(sentence)
+        })
 
     return followups
 
-
 # =====================================
-# GENERATE RISK FOLLOWUPS
+# RISK FOLLOWUPS
 # =====================================
 
 def generate_risk_followups(
@@ -213,13 +395,14 @@ def generate_risk_followups(
     for risk in risks:
 
         text = clean_text(
+
             risk.get(
                 "text",
                 ""
             )
         )
 
-        if not text:
+        if len(text.split()) < 4:
             continue
 
         sentence = (
@@ -228,68 +411,94 @@ def generate_risk_followups(
             f"{text}."
         )
 
-        followups.append(
-            clean_text(sentence)
-        )
+        followups.append({
+
+            "text":
+                clean_text(sentence)
+        })
 
     return followups
 
-
 # =====================================
-# GENERATE SCORE FOLLOWUP
+# MEETING QUALITY FOLLOWUP
 # =====================================
 
-def generate_score_followup(
+def generate_meeting_quality_followup(
     meeting_score
 ):
 
-    if meeting_score >= 80:
+    if meeting_score >= 75:
 
-        return (
-            "Meeting execution and collaboration "
-            "were highly effective."
-        )
+        return {
 
-    if meeting_score >= 60:
+            "text":
+                (
+                    "Meeting execution and "
+                    "collaboration were highly effective."
+                )
+        }
 
-        return (
-            "Meeting productivity was good, "
-            "but execution clarity can improve."
-        )
+    if meeting_score >= 58:
+
+        return {
+
+            "text":
+                (
+                    "Meeting productivity was good, "
+                    "with clear technical discussion "
+                    "and execution planning."
+                )
+        }
 
     if meeting_score >= 40:
 
-        return (
-            "Meeting effectiveness was moderate. "
-            "Reduce distractions and improve "
-            "decision clarity."
-        )
+        return {
 
-    return (
+            "text":
+                (
+                    "Meeting was reasonably effective. "
+                    "Strengthening ownership clarity "
+                    "will improve future outcomes."
+                )
+        }
 
-        "Meeting productivity was low. "
-        "Improve collaboration, reduce "
-        "off-topic discussion, and define "
-        "clear action ownership."
-    )
+    return {
 
+        "text":
+            (
+                "Meeting productivity was low. "
+                "Improve collaboration, task clarity, "
+                "and execution focus."
+            )
+    }
 
 # =====================================
-# DEDUPLICATION
+# FINAL CLEANUP
 # =====================================
 
-def deduplicate_followups(
+def finalize_followups(
     followups
 ):
 
-    unique = []
+    followups = semantic_deduplicate(
+
+        followups,
+
+        "text"
+    )
+
+    cleaned = []
 
     seen = set()
 
     for item in followups:
 
+        text = clean_text(
+            item["text"]
+        )
+
         normalized = (
-            item.lower().strip()
+            text.lower().strip()
         )
 
         if normalized in seen:
@@ -297,10 +506,9 @@ def deduplicate_followups(
 
         seen.add(normalized)
 
-        unique.append(item)
+        cleaned.append(text)
 
-    return unique
-
+    return cleaned
 
 # =====================================
 # MAIN GENERATOR
@@ -322,7 +530,7 @@ def generate_followups(
     followups = []
 
     # ---------------------------------
-    # Action Items
+    # Action items
     # ---------------------------------
 
     followups.extend(
@@ -355,24 +563,20 @@ def generate_followups(
     )
 
     # ---------------------------------
-    # Overall Meeting Recommendation
+    # Meeting quality
     # ---------------------------------
 
     followups.append(
 
-        generate_score_followup(
+        generate_meeting_quality_followup(
             meeting_score
         )
     )
 
     # ---------------------------------
-    # Final Deduplication
+    # Final cleanup
     # ---------------------------------
 
-    followups = (
-        deduplicate_followups(
-            followups
-        )
+    return finalize_followups(
+        followups
     )
-
-    return followups

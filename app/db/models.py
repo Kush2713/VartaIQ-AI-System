@@ -15,11 +15,7 @@ from sqlalchemy.sql import (
     func
 )
 
-from sqlalchemy.ext.declarative import (
-    declarative_base
-)
-
-Base = declarative_base()
+from app.db.database import Base
 
 
 class MeetingAnalysis(Base):
@@ -82,7 +78,7 @@ class MeetingAnalysis(Base):
 
     score = Column(JSON)
 
-    ai_insights = Column(String)
+    ai_insights = Column(JSON)
 
     # =====================================
     # NEW ADVANCED AI FEATURES
