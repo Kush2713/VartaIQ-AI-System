@@ -16,13 +16,6 @@ nlp = spacy.load("en_core_web_sm")
 
 
 # =====================================
-# CONFIGURATION
-# =====================================
-
-
-
-
-# =====================================
 # META MEETING TERMS
 # =====================================
 
@@ -31,16 +24,41 @@ META_MEETING_TERMS = {
     "meeting",
     "discussion",
     "agenda",
-    "topic",
     "timeline",
     "deadline",
     "progress",
     "requirement",
-    "issue",
-    "problem",
     "update",
     "planning",
     "review"
+}
+
+
+# =====================================
+# IMPORTANT CONTEXT TERMS
+# =====================================
+
+IMPORTANT_CONTEXT_TERMS = {
+
+    "risk",
+    "latency",
+    "performance",
+    "deployment",
+    "client",
+    "release",
+    "bug",
+    "issue",
+    "optimization",
+    "api",
+    "failure",
+    "security",
+    "authentication",
+    "database",
+    "backend",
+    "frontend",
+    "analytics",
+    "testing",
+    "integration"
 }
 
 
@@ -63,7 +81,7 @@ FILLER_EXPRESSIONS = {
 
 
 # =====================================
-# CHECK FILLER SENTENCE
+# CHECK FILLER
 # =====================================
 
 def is_filler_sentence(sentence):
@@ -104,6 +122,24 @@ def is_meta_meeting_sentence(sentence):
 
 
 # =====================================
+# IMPORTANT CONTEXT
+# =====================================
+
+def is_important_context_sentence(
+    sentence
+):
+
+    lowered = sentence.lower()
+
+    for term in IMPORTANT_CONTEXT_TERMS:
+
+        if term in lowered:
+            return True
+
+    return False
+
+
+# =====================================
 # MAIN DETECTION
 # =====================================
 
@@ -114,21 +150,9 @@ def detect_useless_talk(
 
     useless_segments = []
 
-    # ---------------------------------
-    # Shared semantic context
-    # ---------------------------------
-
     meeting_embedding = context[
         "meeting_embedding"
     ]
-
-    detected_topics = context[
-        "topics"
-    ]
-
-    # ---------------------------------
-    # Analyze sentences
-    # ---------------------------------
 
     for item in transcript:
 
@@ -140,16 +164,12 @@ def detect_useless_talk(
                 sent.text.strip()
             )
 
-            # -------------------------
-            # Skip empty sentences
-            # -------------------------
-
             if len(sentence_text) < 2:
                 continue
 
-            # -------------------------
-            # Filler conversation
-            # -------------------------
+            # ---------------------------------
+            # Filler
+            # ---------------------------------
 
             if is_filler_sentence(
                 sentence_text
@@ -172,19 +192,28 @@ def detect_useless_talk(
 
                 continue
 
-            # -------------------------
-            # Meta meeting discussion
-            # Never classify as useless
-            # -------------------------
+            # ---------------------------------
+            # Meta discussion
+            # ---------------------------------
 
             if is_meta_meeting_sentence(
                 sentence_text
             ):
                 continue
 
-            # -------------------------
+            # ---------------------------------
+            # IMPORTANT BUSINESS CONTEXT
+            # NEVER MARK USELESS
+            # ---------------------------------
+
+            if is_important_context_sentence(
+                sentence_text
+            ):
+                continue
+
+            # ---------------------------------
             # Semantic relevance
-            # -------------------------
+            # ---------------------------------
 
             relevance_score = (
                 calculate_context_relevance(
@@ -195,9 +224,9 @@ def detect_useless_talk(
                 )
             )
 
-            # -------------------------
-            # Truly off-topic
-            # -------------------------
+            # ---------------------------------
+            # Off-topic
+            # ---------------------------------
 
             if relevance_score < (
                 USELESS_RELEVANCE_THRESHOLD
@@ -215,12 +244,15 @@ def detect_useless_talk(
                         "Off-topic discussion",
 
                     "relevance_score":
-                        relevance_score
+                        round(
+                            relevance_score,
+                            2
+                        )
                 })
 
-    # =================================
-    # SEMANTIC DEDUPLICATION
-    # =================================
+    # =====================================
+    # DEDUPLICATION
+    # =====================================
 
     useless_segments = semantic_deduplicate(
 
@@ -229,14 +261,10 @@ def detect_useless_talk(
         "text"
     )
 
-    # ---------------------------------
-    # Final Output
-    # ---------------------------------
-
     return {
 
-    "useless_segments":
-        useless_segments
+        "useless_segments":
+            useless_segments
     }
 
 

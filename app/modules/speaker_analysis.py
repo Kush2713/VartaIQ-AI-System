@@ -20,9 +20,10 @@ DOMINANT_THRESHOLD = 35
 
 PASSIVE_THRESHOLD = 10
 
-HIGH_ENGAGEMENT_SCORE = 70
+HIGH_ENGAGEMENT_SCORE = 75
 
 MEDIUM_ENGAGEMENT_SCORE = 45
+
 
 # =====================================
 # PRODUCTIVE VERBS
@@ -47,6 +48,32 @@ PRODUCTIVE_VERBS = {
     "document"
 }
 
+
+# =====================================
+# STRATEGIC TERMS
+# =====================================
+
+STRATEGIC_TERMS = {
+
+    "deploy",
+    "architecture",
+    "optimize",
+    "release",
+    "integration",
+    "priority",
+    "decision",
+    "deadline",
+    "risk",
+    "scaling",
+    "latency",
+    "performance",
+    "client",
+    "api",
+    "security",
+    "authentication"
+}
+
+
 # =====================================
 # DECISION TERMS
 # =====================================
@@ -62,6 +89,7 @@ DECISION_TERMS = {
     "decision"
 }
 
+
 # =====================================
 # COLLABORATION TERMS
 # =====================================
@@ -76,6 +104,7 @@ COLLABORATION_TERMS = {
     "coordinate",
     "help"
 }
+
 
 # =====================================
 # PRODUCTIVE SENTENCE
@@ -109,6 +138,24 @@ def is_decision_sentence(
     lowered = sentence.lower()
 
     for term in DECISION_TERMS:
+
+        if term in lowered:
+            return True
+
+    return False
+
+
+# =====================================
+# STRATEGIC SENTENCE
+# =====================================
+
+def is_strategic_sentence(
+    sentence
+):
+
+    lowered = sentence.lower()
+
+    for term in STRATEGIC_TERMS:
 
         if term in lowered:
             return True
@@ -180,6 +227,8 @@ def analyze_speakers(
 
             "decision_sentences": 0,
 
+            "strategic_sentences": 0,
+
             "collaboration_sentences": 0,
 
             "total_sentences": 0,
@@ -228,9 +277,9 @@ def analyze_speakers(
             "word_count"
         ] += word_count
 
-        # -----------------------------
-        # Sentence-level analysis
-        # -----------------------------
+        # ---------------------------------
+        # Sentence level analysis
+        # ---------------------------------
 
         for sent in doc.sents:
 
@@ -245,9 +294,9 @@ def analyze_speakers(
                 "total_sentences"
             ] += 1
 
-            # -------------------------
+            # -----------------------------
             # Relevance
-            # -------------------------
+            # -----------------------------
 
             relevance_score = (
                 calculate_context_relevance(
@@ -272,9 +321,9 @@ def analyze_speakers(
                     "relevant_sentences"
                 ] += 1
 
-            # -------------------------
-            # Productive contribution
-            # -------------------------
+            # -----------------------------
+            # Productive
+            # -----------------------------
 
             if is_productive_sentence(
                 sentence
@@ -284,9 +333,9 @@ def analyze_speakers(
                     "productive_sentences"
                 ] += 1
 
-            # -------------------------
-            # Decision contribution
-            # -------------------------
+            # -----------------------------
+            # Decision
+            # -----------------------------
 
             if is_decision_sentence(
                 sentence
@@ -296,9 +345,21 @@ def analyze_speakers(
                     "decision_sentences"
                 ] += 1
 
-            # -------------------------
-            # Collaboration contribution
-            # -------------------------
+            # -----------------------------
+            # Strategic contribution
+            # -----------------------------
+
+            if is_strategic_sentence(
+                sentence
+            ):
+
+                speaker_stats[speaker][
+                    "strategic_sentences"
+                ] += 1
+
+            # -----------------------------
+            # Collaboration
+            # -----------------------------
 
             if is_collaboration_sentence(
                 sentence
@@ -361,6 +422,13 @@ def analyze_speakers(
 
         ) * 100
 
+        strategic_ratio = (
+
+            stats["strategic_sentences"]
+            / total_sentences
+
+        ) * 100
+
         collaboration_ratio = (
 
             stats[
@@ -391,14 +459,25 @@ def analyze_speakers(
                 )
             )
 
-        # -----------------------------
-        # ENTERPRISE ENGAGEMENT SCORE
-        # -----------------------------
+        # =================================
+        # NORMALIZED RELEVANCE
+        # =================================
+
+        normalized_relevance = min(
+
+            avg_relevance * 200,
+
+            100
+        )
+
+        # =================================
+        # ENTERPRISE EFFECTIVENESS SCORE
+        # =================================
 
         effectiveness_score = (
 
-            (avg_relevance * 100)
-            * 0.25
+            normalized_relevance
+            * 0.30
 
             +
 
@@ -408,17 +487,22 @@ def analyze_speakers(
             +
 
             productivity_ratio
-            * 0.25
-
-            +
-
-            decision_ratio
             * 0.20
 
             +
 
-            collaboration_ratio
+            decision_ratio
+            * 0.15
+
+            +
+
+            strategic_ratio
             * 0.10
+
+            +
+
+            collaboration_ratio
+            * 0.05
         )
 
         engagement_level = (
@@ -466,6 +550,12 @@ def analyze_speakers(
                     2
                 ),
 
+            "strategic_ratio":
+                round(
+                    strategic_ratio,
+                    2
+                ),
+
             "collaboration_ratio":
                 round(
                     collaboration_ratio,
@@ -475,6 +565,12 @@ def analyze_speakers(
             "average_relevance":
                 round(
                     avg_relevance,
+                    2
+                ),
+
+            "normalized_relevance":
+                round(
+                    normalized_relevance,
                     2
                 ),
 

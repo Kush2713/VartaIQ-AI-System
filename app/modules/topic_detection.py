@@ -1,8 +1,6 @@
 import spacy
-import numpy as np
 
 from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics.pairwise import cosine_similarity
 
 from app.modules.context_engine import (
 
@@ -19,13 +17,6 @@ from app.modules.deduplication import (
     semantic_deduplicate
 )
 
-nlp = spacy.load("en_core_web_sm")
-
-
-# =====================================
-# CONFIGURATION
-# =====================================
-
 from app.config.ai_config import (
 
     MIN_TOPIC_LENGTH,
@@ -35,9 +26,44 @@ from app.config.ai_config import (
     TOPIC_SIMILARITY_THRESHOLD
 )
 
+nlp = spacy.load("en_core_web_sm")
+
 
 # =====================================
-# EXTRACT CANDIDATE PHRASES
+# STOP PREFIXES
+# =====================================
+
+STOP_PREFIXES = {
+
+    "the",
+    "a",
+    "an"
+}
+
+
+# =====================================
+# CLEAN TOPIC
+# =====================================
+
+def clean_topic_text(topic):
+
+    words = topic.split()
+
+    while (
+        len(words) > 1
+        and words[0].lower()
+        in STOP_PREFIXES
+    ):
+
+        words.pop(0)
+
+    cleaned = " ".join(words)
+
+    return cleaned.strip()
+
+
+# =====================================
+# EXTRACT CANDIDATE TOPICS
 # =====================================
 
 def extract_candidate_topics(transcript):
@@ -48,17 +74,21 @@ def extract_candidate_topics(transcript):
 
         doc = nlp(item["text"])
 
-        # Extract noun phrases
         for chunk in doc.noun_chunks:
 
-            phrase = chunk.text.strip().lower()
+            phrase = (
+                chunk.text
+                .strip()
+                .lower()
+            )
 
-            # Remove very short phrases
-            if len(phrase) < MIN_TOPIC_LENGTH:
+            if len(phrase) < (
+                MIN_TOPIC_LENGTH
+            ):
                 continue
 
-            # Remove pronouns
             if phrase in {
+
                 "i",
                 "we",
                 "it",
@@ -68,13 +98,20 @@ def extract_candidate_topics(transcript):
             }:
                 continue
 
-            phrases.append(phrase)
+            cleaned = clean_topic_text(
+                phrase
+            )
+
+            if cleaned:
+                phrases.append(
+                    cleaned
+                )
 
     return list(set(phrases))
 
 
 # =====================================
-# GENERATE EMBEDDINGS
+# EMBEDDINGS
 # =====================================
 
 def generate_topic_embeddings(topics):
@@ -82,15 +119,13 @@ def generate_topic_embeddings(topics):
     if not topics:
         return []
 
-    embeddings = embedding_model.encode(
+    return embedding_model.encode(
         topics
     )
 
-    return embeddings
-
 
 # =====================================
-# CLUSTER SIMILAR TOPICS
+# CLUSTER TOPICS
 # =====================================
 
 def cluster_topics(
@@ -106,8 +141,10 @@ def cluster_topics(
         n_clusters=None,
 
         distance_threshold=(
-            1 - TOPIC_SIMILARITY_THRESHOLD
-    ),
+
+            1 -
+            TOPIC_SIMILARITY_THRESHOLD
+        ),
 
         metric="euclidean",
 
@@ -125,17 +162,21 @@ def cluster_topics(
         topic = topics[idx]
 
         if label not in clustered_topics:
-            clustered_topics[label] = []
 
-        clustered_topics[label].append(
-            topic
-        )
+            clustered_topics[
+                label
+            ] = []
+
+        clustered_topics[
+            label
+        ].append(topic)
 
     final_topics = []
 
-    for cluster in clustered_topics.values():
+    for cluster in (
+        clustered_topics.values()
+    ):
 
-        # Pick shortest representative phrase
         representative = min(
             cluster,
             key=len
@@ -149,7 +190,7 @@ def cluster_topics(
 
 
 # =====================================
-# SCORE TOPICS BY MEETING RELEVANCE
+# RANK TOPICS
 # =====================================
 
 def rank_topics(
@@ -167,19 +208,30 @@ def rank_topics(
             )
         )
 
-        score = calculate_semantic_similarity(
+        score = (
+            calculate_semantic_similarity(
 
-            topic_embedding,
+                topic_embedding,
 
-            meeting_embedding
+                meeting_embedding
+            )
         )
 
-        scored_topics.append(
-            (topic, score)
-        )
+        scored_topics.append({
+
+            "topic":
+                topic.title(),
+
+            "relevance_score":
+                round(score, 2)
+        })
 
     scored_topics.sort(
-        key=lambda x: x[1],
+
+        key=lambda x: x[
+            "relevance_score"
+        ],
+
         reverse=True
     )
 
@@ -192,27 +244,17 @@ def rank_topics(
 
 def detect_meeting_topics(transcript):
 
-    # ---------------------------------
-    # Step 1 - Extract candidate topics
-    # ---------------------------------
-
     candidate_topics = (
         extract_candidate_topics(
             transcript
         )
     )
 
-    # ---------------------------------
-    # Step 2 - Generate embeddings
-    # ---------------------------------
-
-    embeddings = generate_topic_embeddings(
-        candidate_topics
+    embeddings = (
+        generate_topic_embeddings(
+            candidate_topics
+        )
     )
-
-    # ---------------------------------
-    # Step 3 - Cluster semantic topics
-    # ---------------------------------
 
     clustered_topics = cluster_topics(
 
@@ -221,19 +263,11 @@ def detect_meeting_topics(transcript):
         embeddings
     )
 
-    # ---------------------------------
-    # Step 4 - Generate meeting context
-    # ---------------------------------
-
     meeting_embedding = (
         generate_meeting_embedding(
             transcript
         )
     )
-
-    # ---------------------------------
-    # Step 5 - Rank topics
-    # ---------------------------------
 
     ranked_topics = rank_topics(
 
@@ -242,28 +276,17 @@ def detect_meeting_topics(transcript):
         meeting_embedding
     )
 
-    # ---------------------------------
-    # Step 6 - Build final topics
-    # ---------------------------------
-
     final_topics = []
 
-    for topic, score in ranked_topics:
+    for topic in ranked_topics:
 
-        if score >= 0.30:
+        if topic[
+            "relevance_score"
+        ] >= 0.30:
 
-            final_topics.append({
-
-                "topic":
-                    topic,
-
-                "relevance_score":
-                    round(score, 2)
-            })
-
-    # ---------------------------------
-    # Step 7 - Semantic deduplication
-    # ---------------------------------
+            final_topics.append(
+                topic
+            )
 
     final_topics = semantic_deduplicate(
 
@@ -271,10 +294,6 @@ def detect_meeting_topics(transcript):
 
         "topic"
     )
-
-    # ---------------------------------
-    # Final output
-    # ---------------------------------
 
     return {
 
