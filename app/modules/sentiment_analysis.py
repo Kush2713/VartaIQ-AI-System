@@ -1,6 +1,8 @@
 import spacy
 
-from transformers import pipeline
+from app.services.model_manager import (
+    get_sentiment_model
+)
 
 from app.modules.context_engine import (
     calculate_context_relevance
@@ -11,18 +13,10 @@ nlp = spacy.load(
 )
 
 # =====================================
-# LOAD SENTIMENT MODEL
+# LOAD SENTIMENT MODEL (HF API)
 # =====================================
 
-sentiment_pipeline = pipeline(
-
-    "sentiment-analysis",
-
-    model=
-    "cardiffnlp/twitter-roberta-base-sentiment-latest",
-
-    truncation=True
-)
+sentiment_pipeline = get_sentiment_model()
 
 # =====================================
 # CONFIGURATION

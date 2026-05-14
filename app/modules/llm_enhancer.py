@@ -1,43 +1,26 @@
-from app.services.model_manager import (
-    get_llm_model
-)
-
-
-# =====================================
-# LOAD CENTRALIZED LLM
-# =====================================
-
-generator = get_llm_model()
-
-
 # =====================================
 # SUMMARY REFINEMENT
+# No LLM needed — BART already produces
+# clean summaries. We just polish here.
 # =====================================
 
 def refine_summary(summary):
 
-    prompt = f"""
+    if not summary:
+        return summary
 
-    Improve this meeting summary professionally.
-    Keep it concise, clean, and business-oriented.
+    summary = summary.strip()
 
-    Summary:
-    {summary}
+    # Strip any model prefix artifacts
+    for prefix in ("summary:", "result:", "output:"):
+        if summary.lower().startswith(prefix):
+            summary = summary[len(prefix):].strip()
 
-    """
+    # Capitalize first letter
+    if summary:
+        summary = summary[0].upper() + summary[1:]
 
-    result = generator(
-
-        prompt,
-
-        max_length=180,
-
-        do_sample=False
-    )
-
-    return result[0][
-        "generated_text"
-    ]
+    return summary
 
 
 # =====================================
