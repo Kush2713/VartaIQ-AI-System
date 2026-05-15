@@ -2,12 +2,13 @@ import os
 import time
 import requests
 import numpy as np
+from sentence_transformers import SentenceTransformer
 
 # =====================================
-# HuggingFace Inference API
-# All models now run on HF servers via API.
-# This eliminates the need to download any
-# models locally, saving significant disk space.
+# HYBRID APPROACH
+# - Embeddings: Local (sentence-transformers)
+# - Summarizer, Sentiment: HF API
+# - spaCy: Local (installed separately)
 # =====================================
 
 HF_API_TOKEN = os.getenv("HF_API_TOKEN", "")
@@ -230,39 +231,16 @@ def get_sentiment_model():
 
 
 # =====================================
-# EMBEDDING MODEL — HF API WRAPPER
-# Now uses HuggingFace API instead of
-# downloading the model locally
+# EMBEDDING MODEL — LOCAL
+# Uses sentence-transformers locally
+# (HF API has issues with this model)
 # =====================================
-
-class EmbeddingAPIWrapper:
-
-    def encode(self, texts, convert_to_numpy=True):
-        """
-        Generate embeddings for text(s).
-        Accepts single string or list of strings.
-        Returns numpy array of embeddings.
-        """
-        # Handle single string input
-        if isinstance(texts, str):
-            texts = [texts]
-        
-        payload = {"inputs": texts}
-        
-        result = _hf_post(EMBEDDING_URL, payload)
-        
-        # HF returns embeddings as nested list
-        if convert_to_numpy:
-            return np.array(result)
-        
-        return result
-
 
 def get_embedding_model():
 
     if "embedding" not in _models:
-        _models["embedding"] = EmbeddingAPIWrapper()
-        print("[Model] Embedding API wrapper ready.")
+        _models["embedding"] = SentenceTransformer("all-MiniLM-L6-v2")
+        print("[Model] Embedding model loaded locally.")
 
     return _models["embedding"]
 
@@ -278,4 +256,4 @@ def preload_models():
     get_sentiment_model()
     get_embedding_model()
 
-    print("\nAll AI models ready (HF API - no local downloads).")
+    print("\nAll AI models ready (Hybrid: Local embeddings + HF API).")
