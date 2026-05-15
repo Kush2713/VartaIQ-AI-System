@@ -127,22 +127,29 @@ def chunk_text(
 
 def summarize_chunk(chunk):
 
-    result = summarizer(
+    try:
+        result = summarizer(
 
-        chunk,
+            chunk,
 
-        max_length=
-        MAX_SUMMARY_LENGTH,
+            max_length=
+            MAX_SUMMARY_LENGTH,
 
-        min_length=
-        MIN_SUMMARY_LENGTH,
+            min_length=
+            MIN_SUMMARY_LENGTH,
 
-        do_sample=False
-    )
+            do_sample=False
+        )
 
-    return result[0][
-        "summary_text"
-    ]
+        return result[0][
+            "summary_text"
+        ]
+    
+    except Exception as e:
+        print(f"[SUMMARIZER ERROR] {str(e)}")
+        # Fallback: return first 100 words
+        words = chunk.split()[:100]
+        return " ".join(words) + "..."
 
 # =====================================
 # EXTRACT IMPORTANT SENTENCES
@@ -355,67 +362,81 @@ def summarize(
     transcript
 ):
 
-    # ---------------------------------
-    # Structured context generation
-    # ---------------------------------
+    try:
+        # ---------------------------------
+        # Structured context generation
+        # ---------------------------------
 
-    structured_context = (
-        build_structured_context(
-            transcript
-        )
-    )
-
-    # ---------------------------------
-    # Word count
-    # ---------------------------------
-
-    word_count = len(
-        structured_context.split()
-    )
-
-    # ---------------------------------
-    # Small meeting optimization
-    # ---------------------------------
-
-    if word_count <= (
-        MAX_CHUNK_WORDS
-    ):
-
-        result = summarizer(
-
-            structured_context,
-
-            max_length=140,
-
-            min_length=50,
-
-            do_sample=False
-        )
-
-        summary = result[0][
-            "summary_text"
-        ]
-
-    # ---------------------------------
-    # Large meeting optimization
-    # ---------------------------------
-
-    else:
-
-        summary = (
-            hierarchical_summarize(
-                structured_context
+        structured_context = (
+            build_structured_context(
+                transcript
             )
         )
 
-    # ---------------------------------
-    # Final cleanup
-    # ---------------------------------
+        # ---------------------------------
+        # Word count
+        # ---------------------------------
 
-    summary = clean_summary(
-        summary
-    )
+        word_count = len(
+            structured_context.split()
+        )
 
-    return summary
+        # ---------------------------------
+        # Small meeting optimization
+        # ---------------------------------
+
+        if word_count <= (
+            MAX_CHUNK_WORDS
+        ):
+
+            result = summarizer(
+
+                structured_context,
+
+                max_length=140,
+
+                min_length=50,
+
+                do_sample=False
+            )
+
+            summary = result[0][
+                "summary_text"
+            ]
+
+        # ---------------------------------
+        # Large meeting optimization
+        # ---------------------------------
+
+        else:
+
+            summary = (
+                hierarchical_summarize(
+                    structured_context
+                )
+            )
+
+        # ---------------------------------
+        # Final cleanup
+        # ---------------------------------
+
+        summary = clean_summary(
+            summary
+        )
+
+        return summary
+    
+    except Exception as e:
+        print(f"[SUMMARIZER CRITICAL ERROR] {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Fallback: Create extractive summary
+        important_sentences = extract_important_sentences(transcript)
+        if important_sentences:
+            fallback_summary = ". ".join(important_sentences[:3]) + "."
+            return fallback_summary
+        else:
+            return "Meeting summary could not be generated. Please check the transcript data."
 
 

@@ -68,28 +68,44 @@ def _hf_post(url, payload, retries=5, wait=20):
     """
     for attempt in range(retries):
 
-        response = requests.post(
-            url,
-            headers=HF_HEADERS,
-            json=payload,
-            timeout=120
-        )
-
-        if response.status_code == 200:
-            return response.json()
-
-        # Model still loading — wait and retry
-        if response.status_code == 503:
-            print(
-                f"[HF API] Model loading, "
-                f"retrying in {wait}s "
-                f"(attempt {attempt + 1}/{retries})..."
+        try:
+            response = requests.post(
+                url,
+                headers=HF_HEADERS,
+                json=payload,
+                timeout=120
             )
-            time.sleep(wait)
-            continue
 
-        # Any other error — raise immediately
-        response.raise_for_status()
+            if response.status_code == 200:
+                return response.json()
+
+            # Model still loading — wait and retry
+            if response.status_code == 503:
+                print(
+                    f"[HF API] Model loading, "
+                    f"retrying in {wait}s "
+                    f"(attempt {attempt + 1}/{retries})..."
+                )
+                time.sleep(wait)
+                continue
+
+            # Any other error — raise immediately
+            print(f"[HF API ERROR] Status: {response.status_code}, Response: {response.text}")
+            response.raise_for_status()
+        
+        except requests.exceptions.Timeout:
+            print(f"[HF API TIMEOUT] Attempt {attempt + 1}/{retries}")
+            if attempt < retries - 1:
+                time.sleep(wait)
+                continue
+            raise
+        
+        except requests.exceptions.RequestException as e:
+            print(f"[HF API REQUEST ERROR] {str(e)}")
+            if attempt < retries - 1:
+                time.sleep(wait)
+                continue
+            raise
 
     raise RuntimeError(
         f"HF API failed after {retries} retries: {url}"

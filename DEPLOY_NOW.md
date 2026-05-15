@@ -3,7 +3,8 @@
 ## Your EC2 Details
 - **IP Address:** 65.2.158.83
 - **SSH Key:** vartaiq-key.pem (already created in this folder)
-- **User:** ubuntu (or ec2-user for Amazon Linux)
+- **User:** ec2-user (Amazon Linux)
+- **OS:** Amazon Linux (uses `yum` not `apt`)
 
 ---
 
@@ -14,18 +15,21 @@
 **On Windows (PowerShell):**
 ```powershell
 cd C:\Users\Admin\Desktop\VartaIQAI
-ssh -i "vartaiq-key.pem" ubuntu@65.2.158.83
+ssh -i "vartaiq-key.pem" ec2-user@65.2.158.83
 ```
 
 **Or simply double-click:** `connect-ec2.bat`
+
+**Note:** Your EC2 uses Amazon Linux, so the user is `ec2-user` (not `ubuntu`)
 
 ### Step 2: Run Quick Setup Script
 
 Once connected to EC2, run these commands:
 
+**For Amazon Linux (your EC2):**
 ```bash
 # Download the setup script
-curl -o setup.sh https://raw.githubusercontent.com/Kush2713/VartaIQ-AI-System/main/EC2_QUICK_SETUP.sh
+curl -o setup.sh https://raw.githubusercontent.com/Kush2713/VartaIQ-AI-System/main/setup-amazon-linux.sh
 
 # Make it executable
 chmod +x setup.sh
@@ -65,7 +69,9 @@ Open in your browser: http://65.2.158.83:8000/docs
 
 ## Option 2: Manual Step-by-Step
 
-If the quick setup doesn't work, follow the detailed guide in `EC2_DEPLOYMENT_GUIDE.md`
+If the quick setup doesn't work, follow the detailed guide:
+- **Amazon Linux:** `EC2_AMAZON_LINUX_SETUP.md` (your EC2)
+- **Ubuntu:** `EC2_DEPLOYMENT_GUIDE.md`
 
 ---
 
@@ -179,8 +185,8 @@ sudo journalctl -u vartaiq -f
 ## Quick Commands
 
 ```bash
-# Connect to EC2
-ssh -i "vartaiq-key.pem" ubuntu@65.2.158.83
+# Connect to EC2 (Amazon Linux)
+ssh -i "vartaiq-key.pem" ec2-user@65.2.158.83
 
 # Check service status
 sudo systemctl status vartaiq
