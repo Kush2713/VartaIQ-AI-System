@@ -28,10 +28,9 @@ HF_HEADERS = {
 # MODEL ENDPOINTS
 # =====================================
 
-# Use models that are confirmed to work with HF Inference API
 SUMMARIZER_URL = (
     "https://api-inference.huggingface.co"
-    "/models/sshleifer/distilbart-cnn-12-6"
+    "/models/facebook/bart-large-cnn"
 )
 
 LLM_URL = (
