@@ -221,4 +221,4 @@ For issues and questions:
 
 ---
 
-**Built with ❤️ using FastAPI, Hugging Face, and spaCy**
+**Built with ❤️ by Team VartaIQ using FastAPI, Hugging Face, and spaCy**
