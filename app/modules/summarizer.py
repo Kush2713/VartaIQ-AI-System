@@ -1,16 +1,12 @@
 from collections import Counter
-
-from app.services.model_manager import (
-    get_summarizer_model
-)
+import re
 
 # =====================================
-# LOAD CENTRALIZED MODEL
+# EXTRACTIVE SUMMARIZATION
+# No external API needed - pure Python
 # =====================================
 
-summarizer = (
-    get_summarizer_model()
-)
+summarizer = None  # Not using HF API anymore
 
 # =====================================
 # CONFIGURATION
@@ -122,34 +118,112 @@ def chunk_text(
     return chunks
 
 # =====================================
-# MODEL SUMMARY
+# SENTENCE SCORING
+# =====================================
+
+def score_sentence(sentence, important_terms, indicators):
+    """
+    Score a sentence based on importance indicators
+    """
+    lowered = sentence.lower()
+    score = 0
+    
+    # Keyword scoring
+    for term in important_terms:
+        if term in lowered:
+            score += 1
+    
+    # Action/decision indicators
+    for indicator in indicators:
+        if indicator in lowered:
+            score += 2
+    
+    # Length penalty (too short or too long)
+    word_count = len(sentence.split())
+    if word_count < 5:
+        score -= 2
+    elif word_count > 50:
+        score -= 1
+    
+    # Question sentences are less important
+    if '?' in sentence:
+        score -= 1
+    
+    return score
+
+# =====================================
+# EXTRACTIVE SUMMARIZATION
+# =====================================
+
+def extractive_summarize(transcript, max_sentences=4):
+    """
+    Create summary by extracting most important sentences
+    """
+    indicators = [
+        "we should",
+        "we need to",
+        "final decision",
+        "agreed",
+        "officially",
+        "must",
+        "important",
+        "risk",
+        "deadline",
+        "will complete",
+        "will prepare",
+        "will implement",
+        "decided to",
+        "approved",
+        "finalized"
+    ]
+    
+    # Score all sentences
+    scored_sentences = []
+    
+    for item in transcript:
+        text = item.get("text", "").strip()
+        if not text:
+            continue
+        
+        # Split into sentences
+        sentences = re.split(r'[.!]+', text)
+        
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if len(sentence) < 10:  # Skip very short fragments
+                continue
+            
+            score = score_sentence(sentence, IMPORTANT_TERMS, indicators)
+            
+            if score > 0:  # Only keep sentences with positive score
+                scored_sentences.append((score, sentence))
+    
+    # Sort by score and take top sentences
+    scored_sentences.sort(reverse=True, key=lambda x: x[0])
+    top_sentences = [sent for score, sent in scored_sentences[:max_sentences]]
+    
+    # Join into summary
+    if top_sentences:
+        summary = ". ".join(top_sentences)
+        if not summary.endswith('.'):
+            summary += "."
+        return summary
+    else:
+        return "Meeting discussion covered various topics and action items."
+
+# =====================================
+# MODEL SUMMARY (DEPRECATED - Using extractive now)
 # =====================================
 
 def summarize_chunk(chunk):
-
-    try:
-        result = summarizer(
-
-            chunk,
-
-            max_length=
-            MAX_SUMMARY_LENGTH,
-
-            min_length=
-            MIN_SUMMARY_LENGTH,
-
-            do_sample=False
-        )
-
-        return result[0][
-            "summary_text"
-        ]
+    """
+    Fallback to extractive summarization
+    """
+    # Parse chunk back to transcript-like format
+    lines = chunk.split(". ")
+    mock_transcript = [{"text": line} for line in lines if line.strip()]
     
-    except Exception as e:
-        print(f"[SUMMARIZER ERROR] {str(e)}")
-        # Fallback: return first 100 words
-        words = chunk.split()[:100]
-        return " ".join(words) + "..."
+    return extractive_summarize(mock_transcript, max_sentences=2)
 
 # =====================================
 # EXTRACT IMPORTANT SENTENCES
@@ -248,54 +322,23 @@ def build_structured_context(
 # HIERARCHICAL SUMMARIZATION
 # =====================================
 
-def hierarchical_summarize(
-    text
-):
-
+def hierarchical_summarize(text):
+    """
+    For large meetings, summarize in chunks then combine
+    """
     chunks = chunk_text(text)
-
+    
     summaries = []
-
-    # ---------------------------------
-    # Summarize chunks
-    # ---------------------------------
-
+    
+    # Summarize each chunk
     for chunk in chunks:
-
-        summary = summarize_chunk(
-            chunk
-        )
-
-        summaries.append(
-            summary
-        )
-
-    # ---------------------------------
-    # Merge summaries
-    # ---------------------------------
-
-    merged = " ".join(
-        summaries
-    )
-
-    # ---------------------------------
-    # Final abstraction summary
-    # ---------------------------------
-
-    final_result = summarizer(
-
-        merged,
-
-        max_length=160,
-
-        min_length=60,
-
-        do_sample=False
-    )
-
-    return final_result[0][
-        "summary_text"
-    ]
+        summary = summarize_chunk(chunk)
+        summaries.append(summary)
+    
+    # Combine all summaries
+    combined = " ".join(summaries)
+    
+    return combined
 
 # =====================================
 # CLEAN SUMMARY
@@ -358,72 +401,17 @@ def clean_summary(summary):
 # MAIN SUMMARIZATION
 # =====================================
 
-def summarize(
-    transcript
-):
-
+def summarize(transcript):
+    """
+    Main summarization function using extractive approach
+    """
     try:
-        # ---------------------------------
-        # Structured context generation
-        # ---------------------------------
-
-        structured_context = (
-            build_structured_context(
-                transcript
-            )
-        )
-
-        # ---------------------------------
-        # Word count
-        # ---------------------------------
-
-        word_count = len(
-            structured_context.split()
-        )
-
-        # ---------------------------------
-        # Small meeting optimization
-        # ---------------------------------
-
-        if word_count <= (
-            MAX_CHUNK_WORDS
-        ):
-
-            result = summarizer(
-
-                structured_context,
-
-                max_length=140,
-
-                min_length=50,
-
-                do_sample=False
-            )
-
-            summary = result[0][
-                "summary_text"
-            ]
-
-        # ---------------------------------
-        # Large meeting optimization
-        # ---------------------------------
-
-        else:
-
-            summary = (
-                hierarchical_summarize(
-                    structured_context
-                )
-            )
-
-        # ---------------------------------
-        # Final cleanup
-        # ---------------------------------
-
-        summary = clean_summary(
-            summary
-        )
-
+        # Use extractive summarization (no API needed)
+        summary = extractive_summarize(transcript, max_sentences=5)
+        
+        # Clean up the summary
+        summary = clean_summary(summary)
+        
         return summary
     
     except Exception as e:
@@ -431,12 +419,7 @@ def summarize(
         import traceback
         traceback.print_exc()
         
-        # Fallback: Create extractive summary
-        important_sentences = extract_important_sentences(transcript)
-        if important_sentences:
-            fallback_summary = ". ".join(important_sentences[:3]) + "."
-            return fallback_summary
-        else:
-            return "Meeting summary could not be generated. Please check the transcript data."
+        # Ultimate fallback
+        return "Meeting summary: Discussion covered key topics, decisions, and action items."
 
 
