@@ -2,7 +2,7 @@
 
 An intelligent AI-powered meeting analysis system that automatically processes meeting transcripts and generates comprehensive insights including summaries, action items, decisions, sentiment analysis, and more.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Python 3.10, 3.11, or 3.12
@@ -45,27 +45,27 @@ An intelligent AI-powered meeting analysis system that automatically processes m
 - **[CHANGES_SUMMARY.md](CHANGES_SUMMARY.md)** - Recent configuration changes
 - **[VartaIQ_AI_Module_Documentation.md](VartaIQ_AI_Module_Documentation.md)** - Complete API documentation
 
-## ✨ Features
+## Features
 
 ### AI-Powered Analysis
-- 📝 **Smart Summarization** - Automatic meeting summaries
-- ✅ **Action Items Detection** - Identifies tasks and assignments
-- 🎯 **Decision Tracking** - Captures key decisions made
-- 💭 **Sentiment Analysis** - Analyzes emotional tone and risks
-- 🗣️ **Speaker Analysis** - Evaluates participation and engagement
-- 🏷️ **Topic Detection** - Identifies main discussion topics
-- 🚫 **Useless Talk Detection** - Filters out off-topic content
-- ⭐ **Meeting Scoring** - Overall productivity assessment
+- **Smart Summarization** - Automatic meeting summaries
+- **Action Items Detection** - Identifies tasks and assignments
+- **Decision Tracking** - Captures key decisions made
+- **Sentiment Analysis** - Analyzes emotional tone and risks
+- **Speaker Analysis** - Evaluates participation and engagement
+- **Topic Detection** - Identifies main discussion topics
+- **Useless Talk Detection** - Filters out off-topic content
+- **Meeting Scoring** - Overall productivity assessment
 
 ### Technical Features
-- 🌐 **Cloud-Based AI** - Uses Hugging Face Inference API (no local model downloads)
-- 💾 **PostgreSQL Database** - Stores all analysis results
-- 🔒 **Secure** - SSL-enabled database connections
-- 🐳 **Docker Ready** - Containerized deployment
-- 📊 **REST API** - FastAPI with automatic documentation
-- ⚡ **Fast** - Optimized processing pipeline
+- **Cloud-Based AI** - Uses Hugging Face Inference API (no local model downloads)
+- **PostgreSQL Database** - Stores all analysis results
+- **Secure** - SSL-enabled database connections
+- **Docker Ready** - Containerized deployment
+- **REST API** - FastAPI with automatic documentation
+- **Fast** - Optimized processing pipeline
 
-## 🏗️ Architecture
+## Architecture
 
 ### AI Models (via Hugging Face API)
 - **Summarization:** facebook/bart-large-cnn
@@ -79,7 +79,7 @@ An intelligent AI-powered meeting analysis system that automatically processes m
 - **AI/ML:** Hugging Face Transformers, spaCy, scikit-learn
 - **Deployment:** Docker, Render, Railway, Heroku compatible
 
-## 🔧 Configuration
+## Configuration
 
 ### Required Environment Variables
 
@@ -90,7 +90,7 @@ An intelligent AI-powered meeting analysis system that automatically processes m
 
 See [ENV_VARIABLES.md](ENV_VARIABLES.md) for detailed configuration.
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Main Endpoint
 ```
@@ -121,7 +121,7 @@ POST /analyze
 - Swagger UI: http://127.0.0.1:8000/docs
 - ReDoc: http://127.0.0.1:8000/redoc
 
-## 🐳 Docker Deployment
+## Docker Deployment
 
 ```bash
 # Build
@@ -137,24 +137,24 @@ docker run \
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for platform-specific instructions.
 
-## 💡 Benefits
+## Benefits
 
 ### Space Efficient
-- ✅ **No large model downloads** (~500MB+ saved)
-- ✅ **Minimal local storage** (only ~40MB for spaCy)
-- ✅ **Fast deployment** (no model download time)
+- **No large model downloads** (~500MB+ saved)
+- **Minimal local storage** (only ~40MB for spaCy)
+- **Fast deployment** (no model download time)
 
 ### Cost Effective
-- ✅ **Free tier available** (Hugging Face API)
-- ✅ **No GPU required** (models run on HF servers)
-- ✅ **Scalable** (automatic load balancing)
+- **Free tier available** (Hugging Face API)
+- **No GPU required** (models run on HF servers)
+- **Scalable** (automatic load balancing)
 
 ### Developer Friendly
-- ✅ **Easy setup** (just 2 environment variables)
-- ✅ **Auto documentation** (FastAPI Swagger)
-- ✅ **Type safety** (Pydantic schemas)
+- **Easy setup** (just 2 environment variables)
+- **Auto documentation** (FastAPI Swagger)
+- **Type safety** (Pydantic schemas)
 
-## 🔍 Example Use Cases
+## Example Use Cases
 
 1. **Team Meetings** - Analyze daily standups, sprint planning, retrospectives
 2. **Client Calls** - Track decisions, action items, and commitments
@@ -194,22 +194,22 @@ pytest
 pytest --cov=app
 ```
 
-## 📝 License
+## License
 
 [Add your license here]
 
-## 🤝 Contributing
+## Contributing
 
 [Add contribution guidelines here]
 
-## 📧 Support
+## Support
 
 For issues and questions:
 - Check the documentation files
 - Review [CHANGES_SUMMARY.md](CHANGES_SUMMARY.md) for recent updates
 - See [VartaIQ_AI_Module_Documentation.md](VartaIQ_AI_Module_Documentation.md) for API details
 
-## 🎯 Roadmap
+## Roadmap
 
 - [ ] Real-time transcription integration
 - [ ] Multi-language support
