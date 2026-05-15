@@ -2,14 +2,12 @@ import os
 import time
 import requests
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 # =====================================
 # HuggingFace Inference API
-# All heavy models run on HF servers.
-# Only the lightweight embedding model
-# (90 MB) runs locally — it's needed
-# for real-time semantic similarity.
+# All models now run on HF servers via API.
+# This eliminates the need to download any
+# models locally, saving significant disk space.
 # =====================================
 
 HF_API_TOKEN = os.getenv("HF_API_TOKEN", "")
@@ -30,23 +28,28 @@ HF_HEADERS = {
 # =====================================
 
 SUMMARIZER_URL = (
-    "https://router.huggingface.co"
-    "/hf-inference/models/facebook/bart-large-cnn"
+    "https://api-inference.huggingface.co"
+    "/models/facebook/bart-large-cnn"
 )
 
 LLM_URL = (
-    "https://router.huggingface.co"
-    "/hf-inference/models/google/flan-t5-base"
+    "https://api-inference.huggingface.co"
+    "/models/google/flan-t5-base"
 )
 
 SENTIMENT_URL = (
-    "https://router.huggingface.co"
-    "/hf-inference/models/cardiffnlp/twitter-roberta-base-sentiment-latest"
+    "https://api-inference.huggingface.co"
+    "/models/cardiffnlp/twitter-roberta-base-sentiment-latest"
+)
+
+EMBEDDING_URL = (
+    "https://api-inference.huggingface.co"
+    "/models/sentence-transformers/all-MiniLM-L6-v2"
 )
 
 # =====================================
 # GLOBAL CACHE
-# (embedding model only — local)
+# Stores API wrapper instances
 # =====================================
 
 _models = {}
@@ -227,18 +230,39 @@ def get_sentiment_model():
 
 
 # =====================================
-# EMBEDDING MODEL — still local (90 MB)
-# Fast, lightweight, needed for real-time
-# semantic similarity on every sentence
+# EMBEDDING MODEL — HF API WRAPPER
+# Now uses HuggingFace API instead of
+# downloading the model locally
 # =====================================
+
+class EmbeddingAPIWrapper:
+
+    def encode(self, texts, convert_to_numpy=True):
+        """
+        Generate embeddings for text(s).
+        Accepts single string or list of strings.
+        Returns numpy array of embeddings.
+        """
+        # Handle single string input
+        if isinstance(texts, str):
+            texts = [texts]
+        
+        payload = {"inputs": texts}
+        
+        result = _hf_post(EMBEDDING_URL, payload)
+        
+        # HF returns embeddings as nested list
+        if convert_to_numpy:
+            return np.array(result)
+        
+        return result
+
 
 def get_embedding_model():
 
     if "embedding" not in _models:
-        _models["embedding"] = SentenceTransformer(
-            "all-MiniLM-L6-v2"
-        )
-        print("[Model] Embedding model loaded locally.")
+        _models["embedding"] = EmbeddingAPIWrapper()
+        print("[Model] Embedding API wrapper ready.")
 
     return _models["embedding"]
 
@@ -254,4 +278,4 @@ def preload_models():
     get_sentiment_model()
     get_embedding_model()
 
-    print("\nAll AI models ready (HF API + local embedding).")
+    print("\nAll AI models ready (HF API - no local downloads).")

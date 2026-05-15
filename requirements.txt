@@ -1,7 +1,6 @@
 fastapi==0.136.1
 uvicorn[standard]
 spacy==3.7.4
-sentence-transformers==2.7.0
 transformers==4.41.2
 tokenizers==0.19.1
 SQLAlchemy==2.0.31
