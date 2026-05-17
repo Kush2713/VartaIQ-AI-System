@@ -29,22 +29,19 @@ HF_HEADERS = {
 # =====================================
 
 SUMMARIZER_URL = (
-    "https://api-inference.huggingface.co"
+    "https://router.huggingface.co/hf-inference"
     "/models/facebook/bart-large-cnn"
 )
-
 LLM_URL = (
-    "https://api-inference.huggingface.co"
+    "https://router.huggingface.co/hf-inference"
     "/models/google/flan-t5-base"
 )
-
 SENTIMENT_URL = (
-    "https://api-inference.huggingface.co"
+    "https://router.huggingface.co/hf-inference"
     "/models/cardiffnlp/twitter-roberta-base-sentiment-latest"
 )
-
 EMBEDDING_URL = (
-    "https://api-inference.huggingface.co"
+    "https://router.huggingface.co/hf-inference"
     "/models/sentence-transformers/all-MiniLM-L6-v2"
 )
 
