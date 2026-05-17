@@ -3,16 +3,28 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Reads from environment variable — set this in deployment platform
-# Falls back to Neon hosted database
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://neondb_owner:npg_dtfB5qLJT7YA@ep-misty-rice-anfocdnb-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-)
+from app.core.logger import get_logger
+
+logger = get_logger(__name__)
+
+# =====================================
+# DATABASE URL — Must be set in .env
+# =====================================
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError(
+        "DATABASE_URL environment variable is not set. "
+        "Please create a .env file with your database URL. "
+        "See .env.example for reference."
+    )
 
 # Render gives URLs starting with "postgres://" but SQLAlchemy needs "postgresql://"
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+logger.info("Database engine initializing...")
 
 engine = create_engine(DATABASE_URL)
 
@@ -23,3 +35,5 @@ SessionLocal = sessionmaker(
 )
 
 Base = declarative_base()
+
+logger.info("Database engine ready.")
