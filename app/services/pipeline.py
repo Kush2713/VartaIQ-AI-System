@@ -1,4 +1,3 @@
-import traceback
 
 from app.modules.context_builder import (
     build_ai_context
@@ -86,6 +85,11 @@ from app.modules.response_formatter import (
 # SAFE MODULE EXECUTION
 # =====================================
 
+from app.core.logger import get_logger
+
+logger = get_logger(__name__)
+
+
 def safe_execute(
     func,
     default_value,
@@ -94,18 +98,14 @@ def safe_execute(
 ):
 
     try:
-
         return func(*args, **kwargs)
 
     except Exception as e:
 
-        print(
-            f"\n[ERROR] {func.__name__}"
+        logger.error(
+            f"Module '{func.__name__}' failed: {str(e)}",
+            exc_info=True   # This automatically includes the full stack trace
         )
-
-        print(str(e))
-
-        traceback.print_exc()
 
         return default_value
 
